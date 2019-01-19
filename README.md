@@ -1,3 +1,3 @@
 # mew - My Extra Works
 
-  * Features miscellaneous works  
+  * Features other projects that I work on  
