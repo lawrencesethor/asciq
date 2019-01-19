@@ -1,0 +1,886 @@
+---
+title: "Simulation - Exponential Distribution"
+author: "Segbehoe, Lawrence Sethor"
+date: "October 30, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+header-includes:
+- \usepackage{bbm}
+- \usepackage{bm}
+- \usepackage{array}
+- \usepackage{amssymb}
+- \usepackage{amsmath}
+- \usepackage{graphicx}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F, fig.width = 11, fig.height = 7, cache = T, eval = T)
+## libraries
+library(mvtnorm)
+library(SpatialExtremes)
+library(rmutil)
+library(knitr)
+```
+
+#### Content
+
+* [Functions](#functions)
+  
+  * [Function for generating the random numbers](#function-for-generating-the-random-sample)
+  
+  * [Coverage probability function](#coverage-probability-function)
+
+* [A quick testing of the coverage probability function](#a-quick-testing-of-the-coverage-probability-function)
+
+* [Coverage probability for all pairwise comparisons](#coverage-probability-for-all-pairwise-comparisons)
+
+  * [Normal distribution](#normal-distribution)
+  * [Exponential distribution](#exponential-distribution)
+  * [Cauchy distribution](#cauchy-distribution)
+  * [Laplace distribution](#laplace-distribution)
+  * [GEV distribution](#gev-distribution)
+  * [Mixture of normal distributions](#mixture-of-normal-distributions)
+
+* [Coverage probability for multiple comparison to control](#coverage-probability-for-multiple-comparison-to-control)
+
+  * [Normal distribution](#normal-distribution)
+  * [Exponential distribution](#exponential-distribution)
+  * [Cauchy distribution](#cauchy-distribution)
+  * [Laplace distribution](#laplace-distribution)
+  * [GEV distribution](#gev-distribution)
+  * [Mixture of normal distributions](#mixture-of-normal-distribution)
+
+
+
+
+
+
+
+### Functions
+
+
+#### Function for generating the random sample
+
+* The arguments of the function `sample.fun` are:
+   + **n**  = sample size
+   + **dist.type** = type of distribution to by used for random sample 
+
+[Back to Content](#content)
+
+```{r}
+sample.fun <- function(n, dist.type){
+  
+  
+  # random sample 
+    
+    if(dist.type == "Normal"|dist.type == "norm"|
+               dist.type == "n"|dist.type == "N"|
+       dist.type == "Norm"|dist.type == "normal"){
+    
+          grp1 = rnorm(n, mean = 0, sd = 1)
+          grp2 = rnorm(n, mean = 1, sd = 1)
+          grp3 = rnorm(n, mean = 2, sd = 1)
+        
+       dat = cbind(grp1, grp2, grp3)
+  
+  
+    } else if (dist.type == "Exp"|dist.type == "exp"|
+               dist.type == "e"|dist.type == "E"){
+      
+          grp1 = rexp(n, rate = 1)
+          grp2 = rexp(n, rate = 2)
+          grp3 = rexp(n, rate = 3)
+          
+      dat = cbind(grp1, grp2, grp3)
+      
+    } else if (dist.type == "Cauchy"|dist.type == "cauchy"|
+               dist.type == "c"|dist.type == "C"){
+      
+          grp1 = rcauchy(n, location = 0, scale = 1)
+          grp2 = rcauchy(n, location = 1, scale = 1)
+          grp3 = rcauchy(n, location = 2, scale = 1)
+          
+      dat = cbind(grp1, grp2, grp3)
+          
+    } else if (dist.type == "Laplace"|dist.type == "laplace"
+               |dist.type == "L"|dist.type == "l"){
+      library("rmutil")
+      
+          grp1 <- rlaplace(n, m = 0, s = 1)
+          grp2 <- rlaplace(n, m = 1, s = 1)
+          grp3 <- rlaplace(n, m = 2, s = 1)
+          
+       dat = cbind(grp1, grp2, grp3)
+          
+    } else if (dist.type == "GEV"|dist.type == "gev"|dist.type == "Gev"|
+               dist.type == "g"|dist.type == "G"){
+      library("SpatialExtremes")
+      
+         grp1 <- rgev(n, loc = 0, scale = 1, shape = 0)
+         grp2 <- rgev(n, loc = 1, scale = 1, shape = 0)
+         grp3 <- rgev(n, loc = 2, scale = 1, shape = 0)
+         
+     dat = cbind(grp1, grp2, grp3)
+    
+    } else if(dist.type == "Mixture"|dist.type == "mix"|
+               dist.type == "m"|dist.type == "M"|
+       dist.type == "normalmixture"|dist.type == "nm"){
+
+      # group 1
+        probs = c(.5,.5)          
+        dists = runif(n)          
+        grp1 = vector(length = n)
+      for(i in 1: n){
+        if(dists[i] < probs[1]){
+          grp1[i] = rnorm(1, mean=0, sd=1)
+        } else {
+          grp1[i] = rnorm(1, mean=1, sd=1)
+        }
+      }
+        
+        # group 2
+        probs = c(.5,.5)          
+        dists = runif(n)          
+        grp2 = vector(length = n)
+      for(i in 1: n){
+        if(dists[i] < probs[1]){
+          grp2[i] = rnorm(1, mean=1, sd=1)
+        } else {
+          grp2[i] = rnorm(1, mean=2, sd=1)
+        }
+      }
+        
+        # group 3
+        probs = c(.5,.5)          
+        dists = runif(n)          
+        grp3 = vector(length = n)
+      for(i in 1: n){
+        if(dists[i] < probs[1]){
+          grp3[i] = rnorm(1, mean=2, sd=1)
+        } else {
+          grp3[i] = rnorm(1, mean=3, sd=1)
+        }
+      }
+        
+      dat = cbind(grp1, grp2, grp3)
+      
+  }
+  
+  
+  
+  return(dat)
+}
+
+
+## testing the sample.fun functions
+sample.fun(10, "g")
+```
+
+
+
+#### Coverage probability function
+
+
+* The arguments of the function `Coverage.Prob` are
+    + **R**  = number of replications
+    + **n**  = sample size
+    + **comp.type**  = type of comparison to use with options
+      + **ap** = all pairwise comparison and 
+      + **mc** = multiple comparison to control
+    + **dist.type**  = type of distribution to be used for the random samples
+
+[Back to Content](#content)
+
+
+```{r}
+
+Coverage.Prob <- function(R = 1000, n, comp.type , dist.type ){
+
+
+      R  #replications
+      n  # sample size
+      
+      k = 3 # number of  groups
+      grp = 1:k # groups
+      
+      # container for density estimates at the median
+      est.f.md = vector(length = k )
+      
+      ci = vector(length = R)
+      
+      # dat = NULL
+
+
+    for (i in 1:R) {
+      
+      # get sample for the three groups
+      dat = sample.fun(n, dist.type)
+      
+      # get the median of each group
+      md = apply(dat, 2, median)
+      
+      
+      if(comp.type == "ap"){
+  
+      # design matrix for all pairwise comparison
+      design.matrix <- matrix(c(1,-1, 0,1,0,-1,0,1,-1), nrow = 3, byrow = T)
+      
+      } else if (comp.type == "mc"){
+        
+      # design matrix for multiple comparison to control
+      design.matrix <- matrix(c(1,0,-1,0,1,-1), nrow = 2, byrow = T)
+      
+      }
+      
+      
+      # get delta
+      DELTA = design.matrix%*%md   # all pairwise comparison
+      
+      
+      # True DELTA 
+      # It depends on the distribution being used to for the random sample
+      
+    if(dist.type == "Normal"|dist.type == "norm"|
+               dist.type == "n"|dist.type == "N"|
+       dist.type == "Norm"|dist.type == "normal"){
+    
+      true.DELTA = design.matrix%*%c(0,1,2)
+      
+    } else if (dist.type == "Exp"|dist.type == "exp"|
+               dist.type == "e"|dist.type == "E"){
+      
+      true.DELTA = design.matrix%*%c(log(2), 0.5*log(2), (1/3)*log(2))
+     
+    } else if (dist.type == "Cauchy"|dist.type == "cauchy"|
+               dist.type == "c"|dist.type == "C"){
+      
+      true.DELTA = design.matrix%*%c(0,1,2)
+    
+    } else if (dist.type == "Laplace"|dist.type == "laplace"
+               |dist.type == "L"|dist.type == "l"){
+      
+      true.DELTA = design.matrix%*%c(0,1,2)
+    
+    } else if (dist.type == "GEV"|dist.type == "gev"|dist.type == "Gev"|
+               dist.type == "g"|dist.type == "G"){
+      
+      true.DELTA = design.matrix%*%c(-log(log(2)), 1- log(log(2)), 2 -log(log(2)))
+    
+    } else if (dist.type == "Mixture"|dist.type == "mix"|
+               dist.type == "m"|dist.type == "M"|
+       dist.type == "normalmixture"|dist.type == "nm"){
+   
+      true.DELTA = design.matrix%*%c((0.5),(3/2),(5/2))
+    
+    } 
+      
+     
+      ## density estimates at the median
+      
+      
+          # treatment 1
+          den.grp1 <- density(dat[,1])
+          datfram.grp1 <- data.frame(x = den.grp1$x, y = den.grp1$y)
+          ix1 = which.min(abs(den.grp1$x - md[grp[1]]))
+          est.f.md[grp[1]] <- datfram.grp1[ix1,"y"]
+          
+          # treatment 2
+          den.grp2 <- density(dat[,2])
+          datfram.grp2 <- data.frame(x = den.grp2$x, y = den.grp2$y)
+          ix2 = which.min(abs(den.grp2$x - md[grp[2]]))
+          est.f.md[grp[2]] <- datfram.grp2[ix2,"y"]
+          
+          # control 1
+           den.grp3 <- density(dat[,3])
+          datfram.grp3 <- data.frame(x = den.grp3$x, y = den.grp3$y)
+          ix3 = which.min(abs(den.grp3$x - md[grp[3]]))
+          est.f.md[grp[3]] <- datfram.grp3[ix3,"y"]
+    
+    
+    # Compute the Confidence intervals      
+          
+      # vector of variance 1 for each group
+      sig2 <- 1/(4*n*(est.f.md^2))
+      
+      # get the SIGMA
+      SIGMA <- diag(sig2)
+    
+      # covariance matrix
+      cov.mat <- design.matrix%*%SIGMA%*%t(design.matrix)
+    
+      # building the correlation matrix associated with the
+      # the covariance matrix
+      D <- sqrt(diag(diag(cov.mat)))
+      D.inv <- solve(D)
+      corr.mat <- D.inv%*%cov.mat%*%D.inv
+    
+      # equicoordinate quantile 
+      qq <- qmvnorm(0.95, sigma = corr.mat, tail = "both")$quantile
+    
+      C <- qq*sqrt(diag(cov.mat))
+      
+      # confidence interval
+      CI = cbind(DELTA - C, DELTA + C)
+      
+      
+      if(comp.type == "ap"){
+  
+       ci[i] =  ((CI[1,1] < true.DELTA[1,1]) & (true.DELTA[1,1] < CI[1,2] ) &
+               (CI[2,1] < true.DELTA[2,1]) & (true.DELTA[2,1] < CI[2,2] ) &
+               (CI[3,1] < true.DELTA[3,1]) & (true.DELTA[3,1] < CI[3,2] ) )
+           
+      } else if (comp.type == "mc"){
+        
+        ci[i] = ((CI[1,1] < true.DELTA[1,1]) & (CI[1,2] > true.DELTA[1,1]) &
+                (CI[2,1] < true.DELTA[2,1]) & (CI[2,2] > true.DELTA[2,1]))
+      }
+     
+      
+      
+    }
+
+  CP = mean(ci)
+  return(CP)
+
+}
+
+
+```
+
+
+## A quick testing of the coverage probability function
+
+  * For 100 replications 
+  * sample size = 100 
+  * all pairwise comparison
+  * For mixture of normal distribution
+
+[Back to Content](#content)
+```{r ,eval=FALSE}
+# for 100 replications and sample size = 100 and
+# all pairwise comparison for mixture distribution
+CP = Coverage.Prob(R = 100, n =100, comp.type = "ap", dist.type = "Mixture")
+data.frame(Coverage_Prob = CP)
+```
+
+
+
+\newpage
+
+## Coverage probability for all pairwise comparisons
+
+  * For a quick calculations and check on the code, I do the simulation for just **100** replications for all distributions under all pairwise comparisons
+  
+  
+[Back to Content](#content)
+
+
+### Normal distribution
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  sample.size = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = 20, comp.type = "ap", dist.type = "normal")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("All pairwise Comparisons - 
+                               Normal Distribution")))
+
+```
+
+### Exponential distribution
+
+
+[Back to Content](#content)
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "ap", dist.type = "exp")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("All pairwise Comparisons - 
+                               Exponential Distribution")))
+
+```
+
+
+### Cauchy distribution
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "ap", dist.type = "Cauchy")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("All pairwise Comparisons - 
+                               Cauchy Distribution")))
+
+```
+
+
+
+
+### Laplace distribution
+
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "ap", dist.type = "Laplace")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("All pairwise Comparisons - 
+                               Laplace Distribution")))
+
+```
+
+
+
+### GEV distribution
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "ap", dist.type = "GEV")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("All pairwise Comparisons - 
+                               GEV Distribution")))
+
+```
+
+
+
+
+### Mixture of normal distributions
+
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "ap", dist.type = "Mixture")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("All pairwise Comparisons - 
+                               Mixture of normal distribution")))
+
+```
+
+
+\newpage
+## Coverage probability for multiple comparison to control
+
+* For a quick calculations and check on the code, I do the simulation for just **100** replications for all distributions under multiple comparison to control
+  
+
+
+### Normal distribution
+
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "mc", dist.type = "normal")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("Multiple comparison to control - 
+                               Normal Distribution")))
+
+```
+
+### Exponential distribution
+
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "mc", dist.type = "exp")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("Multiple comparison to control - 
+                               Exponential Distribution")))
+
+```
+
+
+### Cauchy distribution
+
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "mc", dist.type = "Cauchy")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("Multiple comparison to control - 
+                               Cauchy Distribution")))
+
+```
+
+
+
+
+### Laplace distribution
+
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "mc", dist.type = "Laplace")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("Multiple comparison to control - 
+                               Laplace Distribution")))
+
+```
+
+
+
+### GEV distribution
+
+
+[Back to Content](#content)
+
+```{r,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "mc", dist.type = "GEV")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("Multiple comparison to control - 
+                               GEV Distribution")))
+
+```
+
+
+
+
+### Mixture of normal distribution
+
+
+[Back to Content](#content)
+
+
+```{r ,eval=FALSE}
+
+N = c(10, 30, 100, 500)
+
+CP = vector(length = length(N))
+
+for (i in 1:length(N)) {
+  n = N[i]
+  CP[i] = Coverage.Prob(R = 100, n = n, comp.type = "mc", dist.type = "Mixture")
+}
+
+Cov.Prob = data.frame(n = N, Coverage.Probability = CP)
+
+
+kable(Cov.Prob, caption = c(paste("Coverage Probabilities by sample"),
+                         paste("Multiple comparison to control - 
+                               Mixture of normal distributions")))
+
+```
+
+
+[Back to Content](#content)
+
+
+
+
+
+
+## Histogram of the true density and estimated density
+
+[Back to Content](#content)
+
+  * For Cauchy(0,1) the true density and the estimated densities are shown by sample size.
+  * From the 10000 replications, the second row shows the histogram of $\hat{f}(\hat{\xi})$ and the dotted vertical lines represent $f(\xi)$
+
+```{r , fig.height=6, fig.width=11, eval= T}
+
+f <- function(n){seq(-10, 10, length.out = n)}
+
+histogram.fun <- function(R, dist.type){
+
+
+  # container for density estimates at the median
+      est.f.md5 = NULL
+      est.f.md10 = NULL
+      est.f.md100 = NULL
+      est.f.md500 = NULL
+  
+      # groups
+      grp = 1:3
+ 
+      k = 1
+       for(i in 1 :R){
+    
+    dat_n5 <- sample.fun(5, dist.type)
+    dat_n10 <- sample.fun(10, dist.type)
+    dat_n100 <- sample.fun(100, dist.type)
+    dat_n500 <- sample.fun(500, dist.type)
+    
+    
+    md_n5 = apply(dat_n5, 2, median)
+    md_n10 = apply(dat_n10, 2, median)
+    md_n100 = apply(dat_n100, 2, median)
+    md_n500 = apply(dat_n500, 2, median)
+    
+    ## density estimates at the median
+      
+          # n =5
+          den.grp1 <- density(dat_n5[,1])
+          datfram.grp1 <- data.frame(x = den.grp1$x, y = den.grp1$y)
+          ix1 = which.min(abs(den.grp1$x - md_n5[grp[1]]))
+          est.f.md5[k] <- datfram.grp1[ix1,"y"]
+          
+          # n =10
+          den.grp1 <- density(dat_n10[,1])
+          datfram.grp1 <- data.frame(x = den.grp1$x, y = den.grp1$y)
+          ix1 = which.min(abs(den.grp1$x - md_n10[grp[1]]))
+          est.f.md10[k] <- datfram.grp1[ix1,"y"]
+          
+          # n = 100
+           den.grp1 <- density(dat_n100[,1])
+          datfram.grp1 <- data.frame(x = den.grp1$x, y = den.grp1$y)
+          ix1 = which.min(abs(den.grp1$x - md_n100[grp[1]]))
+          est.f.md100[k] <- datfram.grp1[ix1,"y"]
+          
+          # n = 500
+           den.grp1 <- density(dat_n500[,1])
+          datfram.grp1 <- data.frame(x = den.grp1$x, y = den.grp1$y)
+          ix1 = which.min(abs(den.grp1$x - md_n500[grp[1]]))
+          est.f.md500[k] <- datfram.grp1[ix1,"y"]
+          
+      k = k +1   
+      
+    }
+ 
+  dat_n5 <- sample.fun(5, dist.type)
+  dat_n10 <- sample.fun(10, dist.type)
+  dat_n100 <- sample.fun(100, dist.type)
+  dat_n500 <- sample.fun(500, dist.type)      
+           
+
+
+if (dist.type == "Cauchy"|dist.type == "cauchy"|
+               dist.type == "c"|dist.type == "C"){
+par(mfrow = c(2, 4))  
+ plot(density(dat_n5[, 1]), main = "",  xlim = c(-10, 10), ylim = c(0,.4))
+lines(f(512), dcauchy(f(512)), lty = 3, col = 4, lwd = 2)
+plot(density(dat_n10[, 1]), main = "", ylim = c(0,.4),  xlim = c(-10, 10))
+lines(f(512), dcauchy(f(512)), lty = 3, col = 4, lwd = 2)
+plot(density(dat_n100[, 1]), main = "", xlim = c(-10, 10), ylim = c(0,.4) )
+lines(f(512), dcauchy(f(512)), lty = 3, col = 4, lwd = 2)
+plot(density(dat_n500[, 1]), main = "", xlim = c(-20, 20), ylim = c(0,.4))
+lines(f(512), dcauchy(f(512)), lty = 3, col = 4, lwd = 2)
+
+
+hist(est.f.md5, main = "N = 5", freq = F,breaks = "fd",xlim = c(0,2.0),
+     las =1, xlab = expression(hat(italic(f))(hat(xi))))
+abline(v = (1/pi), col = 2, lty = 2, lwd = 2)
+
+hist(est.f.md10, nclass = 60, main = "N = 10", freq = F,
+     las =1, xlab = expression(hat(f)(hat(xi))))
+abline(v = (1/pi), col = 2, lty = 2, lwd = 2)
+
+
+hist(est.f.md100, nclass = 60, main = "N = 100", freq = F,
+     las =1, xlab = expression(hat(f)(hat(xi))))
+abline(v = (1/pi), col = 2, lty = 2, lwd = 2)
+
+hist(est.f.md500, nclass = 60, main = "N = 500", freq = F,
+     las =1, xlab = expression(hat(f)(hat(xi))))
+abline(v =( 1/pi), col = 2, lty = 2, lwd = 2)    
+    
+
+
+par(mfrow = c(1,1))
+
+    } else if (dist.type == "Laplace"|dist.type == "laplace"
+               |dist.type == "L"|dist.type == "l"){
+      
+      library(rmutil)
+par(mfrow = c(2, 4))
+
+ plot(density(dat_n5[, 1]), main = "",  xlim = c(-10, 10), ylim = c(0,.5))
+lines(f(512), dlaplace(f(512)), lty = 3, col = 4, lwd = 2)
+plot(density(dat_n10[, 1]), main = "", ylim = c(0,.5),  xlim = c(-10, 10))
+lines(f(512), dlaplace(f(512)), lty = 3, col = 4, lwd = 2)
+plot(density(dat_n100[, 1]), main = "" , ylim = c(0,.5), xlim = c(-10, 10))
+lines(f(512), dlaplace(f(512)), lty = 3, col = 4, lwd = 2)
+plot(density(dat_n500[, 1]), main = "", xlim = c(-10, 10), ylim = c(0,.5))
+lines(f(512), dlaplace(f(512)), lty = 3, col = 4, lwd = 2) 
+
+
+
+hist(est.f.md5, main = "N = 5", freq = F,breaks = "fd",xlim = c(0,2.0),
+     las =1, xlab = expression(hat(italic(f))(hat(xi))))
+abline(v = (1/2), col = 2, lty = 2, lwd = 2)
+
+hist(est.f.md10, nclass = 60, main = "N = 10", freq = F,
+     las =1, xlab = expression(hat(f)(hat(xi))))
+abline(v = (1/2), col = 2, lty = 2, lwd = 2)
+
+hist(est.f.md100, nclass = 60, main = "N = 100", freq = F,
+     las =1, xlab = expression(hat(f)(hat(xi))))
+abline(v = (1/2), col = 2, lty = 2, lwd = 2)
+
+hist(est.f.md500, nclass = 60, main = "N = 500", freq = F,
+     las =1, xlab = expression(hat(f)(hat(xi))))
+abline(v =( 1/2), col = 2, lty = 2, lwd = 2)
+
+
+par(mfrow = c(1,1))
+
+}
+
+
+}
+```
+
+
+
+
+
+
+
+```{r}
+
+histogram.fun(R = 10000, "c")
+
+
+
+```
+
+
+
+
+
+```{r}
+
+histogram.fun(R = 10000, "l")
+
+
+
+```
+
+
+
